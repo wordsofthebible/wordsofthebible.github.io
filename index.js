@@ -1,3 +1,7 @@
+// deno-fmt-ignore-file
+// deno-lint-ignore-file
+// This code was bundled using `deno bundle` and it's not recommended to edit it manually
+
 function ascending(a, b) {
     return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -7710,12 +7714,29 @@ const drawBackground = ()=>{
         }
     });
 };
-const draw = ()=>{
+const draw = async ()=>{
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let start26 = 0;
+    const amount = 2500;
+    const drawers = [];
+    while(start26 + 2500 < words.length){
+        drawers.push(new Promise((resolve)=>{
+            const startc = start26;
+            setTimeout(()=>{
+                drawPart(startc, 2500);
+                resolve(null);
+            }, 0);
+        }));
+        start26 += amount;
+    }
+    await Promise.all(drawers);
+};
+const drawPart = (start27, amount)=>{
     const stems = searches.map((d)=>d.value
     ).map(normalizeWord);
-    words.forEach((w, i)=>{
-        const [x, y] = wordLocation.forward(i, size);
+    for(let wordI = start27; wordI < start27 + amount && wordI < words.length; wordI++){
+        const w = words[wordI];
+        const [x, y] = wordLocation.forward(wordI, size);
         for(let s = 0; s < stems.length; s += 1){
             if (w.word === wordMap.get(stems[s])) {
                 let color2 = color(searchColors[s].value);
@@ -7726,7 +7747,7 @@ const draw = ()=>{
                 ctx.fill();
             }
         }
-    });
+    }
 };
 const drawHover = ()=>{
     hoverContext.clearRect(0, 0, canvas.width, canvas.height);
@@ -7742,8 +7763,8 @@ const drawHover = ()=>{
     if (hoverIndex < words.length / 2) {
         xShift = canvas.clientWidth - 2 * padding - hoverSize.x * sectionWidth;
     }
-    const start26 = words[startIndex];
-    const ref = `${bookMapInv.get(start26.book)} ${start26.chapter}:${start26.verse}`;
+    const start28 = words[startIndex];
+    const ref = `${bookMapInv.get(start28.book)} ${start28.chapter}:${start28.verse}`;
     hoverContext.fillText(ref, padding + xShift, padding - 3);
     words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i)=>{
         let [x, y] = wordLocation.forward(startIndex + i, size);
@@ -7759,9 +7780,9 @@ const drawHover = ()=>{
         ];
         for(let s = 0; s < stems.length; s += 1){
             if (w.word === wordMap.get(stems[s])) {
-                let color5 = color(searchColors[s].value);
-                color5.opacity = hoverOpacity;
-                backgroundColor = color5.toString();
+                let color6 = color(searchColors[s].value);
+                color6.opacity = hoverOpacity;
+                backgroundColor = color6.toString();
                 textColor = [
                     255,
                     255,
@@ -7888,4 +7909,3 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
         initializeView();
     })
 );
-

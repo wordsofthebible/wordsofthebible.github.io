@@ -162,12 +162,32 @@ const drawBackground = () => {
 
 };
 
-const draw = () => {
+const draw = async () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  let start = 0;
+  const amount = 2500;
+  const drawers = [];
+  while (start + amount < words.length) {
+    drawers.push(new Promise((resolve) => {
+      const startc = start;
+      const amountc = amount
+      setTimeout(() => {
+        drawPart(startc, amountc);
+        resolve(null);
+      }, 0)
+    }));
+    start += amount;
+  }
 
+  await Promise.all(drawers);
+}
+
+const drawPart = (start: number, amount: number) => {
   const stems = searches.map(d => d.value).map(normalizeWord);
-  words.forEach((w, i) => {
-    const [x, y] = wordLocation.forward(i, size);
+  for (let wordI = start; wordI < start + amount && wordI < words.length; wordI++) {
+    const w = words[wordI];
+    const [x, y] = wordLocation.forward(wordI, size);
     for (let s = 0; s < stems.length; s += 1) {
       if (w.word === wordMap.get(stems[s])) {
         let color = d3.color(searchColors[s].value) as d3.RGBColor;
@@ -179,7 +199,7 @@ const draw = () => {
         // ctx.fillRect(x - minSize / 2, y - minSize / 2, size + minSize, size + minSize);
       }
     }
-  });
+  }
 };
 
 const drawHover = () => {
