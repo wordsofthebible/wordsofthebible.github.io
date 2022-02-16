@@ -2668,10 +2668,10 @@ function map(object2, f) {
     } else if (object2) for(var key in object2)map2.set(key, object2[key]);
     return map2;
 }
-function Set() {}
+function Set1() {}
 var proto = map.prototype;
-Set.prototype = set2.prototype = {
-    constructor: Set,
+Set1.prototype = set2.prototype = {
+    constructor: Set1,
     has: proto.has,
     add: function(value55) {
         value55 += "";
@@ -2686,8 +2686,8 @@ Set.prototype = set2.prototype = {
     each: proto.each
 };
 function set2(object3, f) {
-    var set21 = new Set();
-    if (object3 instanceof Set) object3.each(function(value56) {
+    var set21 = new Set1();
+    if (object3 instanceof Set1) object3.each(function(value56) {
         set21.add(value56);
     });
     else if (object3) {
@@ -7714,22 +7714,29 @@ const drawBackground = ()=>{
         }
     });
 };
-const draw = async ()=>{
+const renderedAt = new Set();
+let runningTimeouts = [];
+const draw = ()=>{
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    runningTimeouts.forEach((t)=>clearTimeout(t)
+    );
+    runningTimeouts = [];
+    renderedAt.clear();
     let start26 = 0;
     const amount = 2500;
-    const drawers = [];
     while(start26 + 2500 < words.length){
-        drawers.push(new Promise((resolve)=>{
-            const startc = start26;
-            setTimeout(()=>{
+        const startc = start26;
+        const timeout1 = setTimeout(()=>{
+            if (!renderedAt.has(startc)) {
                 drawPart(startc, 2500);
-                resolve(null);
-            }, 0);
-        }));
+                renderedAt.add(startc);
+            }
+            runningTimeouts = runningTimeouts.filter((v)=>v !== timeout1
+            );
+        }, 0);
+        runningTimeouts.push(timeout1);
         start26 += amount;
     }
-    await Promise.all(drawers);
 };
 const drawPart = (start27, amount)=>{
     const stems = searches.map((d)=>d.value

@@ -162,25 +162,32 @@ const drawBackground = () => {
 
 };
 
-const draw = async () => {
+const renderedAt = new Set();
+
+let runningTimeouts: number[] = [];
+
+const draw = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  runningTimeouts.forEach((t) => clearTimeout(t));
+  runningTimeouts = [];
+  renderedAt.clear();
   
   let start = 0;
   const amount = 2500;
-  const drawers = [];
   while (start + amount < words.length) {
-    drawers.push(new Promise((resolve) => {
-      const startc = start;
-      const amountc = amount
-      setTimeout(() => {
+    const startc = start;
+    const amountc = amount;
+    const timeout = setTimeout(() => {
+      if (!renderedAt.has(startc)) {
         drawPart(startc, amountc);
-        resolve(null);
-      }, 0)
-    }));
+        renderedAt.add(startc);
+      }
+
+      runningTimeouts = runningTimeouts.filter(v => v !== timeout);
+    }, 0)
+    runningTimeouts.push(timeout);
     start += amount;
   }
-
-  await Promise.all(drawers);
 }
 
 const drawPart = (start: number, amount: number) => {
