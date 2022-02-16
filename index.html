@@ -60,11 +60,17 @@
         </div>
       </div>
       <div class="navbar-end">
-        <div class="form-control">
+        <div class="form-control pr-3">
           <label class="label">
             <span class="label-text">&nbsp;</span>
           </label>
           <label id="share-button" for="share-modal" class="btn btn-sm modal-button">Share</label>
+        </div>
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">&nbsp;</span>
+          </label>
+          <label for="about-modal" class="btn btn-sm btn-ghost modal-button">About</label>
         </div>
       </div>
     </div>
@@ -72,6 +78,7 @@
     <canvas id="background" style="position:absolute;top:84px;left:0px;width:100vw;height:calc(100vh - 84px)"></canvas>
     <canvas id="hover"      style="position:absolute;top:84px;left:0px;width:100vw;height:calc(100vh - 84px)"></canvas>
     <div id="info" style="position:absolute;top:0px;left:0px"></div>
+
     <input type="checkbox" id="share-modal" class="modal-toggle">
     <div class="modal">
       <div class="modal-box">
@@ -81,6 +88,33 @@
         <button id="copy-link-button" class="btn btn-sm">Copy</button>
         <div class="modal-action">
           <label for="share-modal" class="btn btn-sm">Done</label>
+        </div>
+      </div>
+    </div>
+
+    <input type="checkbox" id="about-modal" class="modal-toggle">
+    <div class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">About</h3>
+        <p class="py-4">
+          The entire KJV Bible is arranged in columns from left to right.
+          Type in a search box to highlight where a specific word appears.
+          Hover over the main area to examine passages.
+          Click the color next to a search box to update the word color.
+          Experiment with size and strength to customize the appearance.
+        </p>
+        <p class="py-4">
+          Once you have made an interesting view, click the share button
+          and copy a link to share with others.
+        </p>
+        <p class="py-4">
+          The source code for this site is available on <a class="link" target="_blank" href="https://github.com/wordsofthebible/wordsofthebible.github.io">GitHub</a>.
+          See a problem? Please submit an <a class="link" target="_blank" href="https://github.com/wordsofthebible/wordsofthebible.github.io/issues/new">issue</a> (requires a GitHub account).
+          KJV data was made available by <a class="link" target="_blank" href="https://github.com/robertrouse/theographic-bible-metadata">Robert Rouse</a> under a Creative Commons Attribution Share-Alike 4.0 License.
+          See more Bible visualizations at <a class="link" target="_blank" href="https://viz.bible">Viz.Bible</a>.
+        </p>
+        <div class="modal-action">
+          <label for="about-modal" class="btn btn-sm">Ok</label>
         </div>
       </div>
     </div>
