@@ -17,29 +17,32 @@ type Word = {
 // const normalizeWord = (d: string) => stemmer(d.toLowerCase());
 const normalizeWord = (d: string) => d.toLowerCase();
 
-const verses = (await (await fetch('kjv.json')).json()) as Verse[];
 
 const wordMap = new Map<string, number>();
-let wordIndex = 0;
 const bookMap = new Map<string, number>();
 const bookMapInv = new Map<number, string>();
-let bookIndex = 0;
-const words = verses.map(v => {
-  const [book, chapter, verse] = v.ref.split(".");
-  return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
-    const stem = normalizeWord(word);
-    if (!wordMap.has(stem)) {
-      wordMap.set(stem, wordIndex);
-      wordIndex += 1;
-    }
-    if (!bookMap.has(book)) {
-      bookMap.set(book, bookIndex);
-      bookMapInv.set(bookIndex, book);
-      bookIndex += 1;
-    }
-    return {book: bookMap.get(book) as number, chapter: +chapter, verse: +verse, word: wordMap.get(stem) as number, text: word};
-  });
-}).flat();
+let words = [] as Word[];
+
+const versesToWords = (verses: Verse[]) => {
+  let wordIndex = 0;
+  let bookIndex = 0;
+  return verses.map(v => {
+    const [book, chapter, verse] = v.ref.split(".");
+    return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
+      const stem = normalizeWord(word);
+      if (!wordMap.has(stem)) {
+        wordMap.set(stem, wordIndex);
+        wordIndex += 1;
+      }
+      if (!bookMap.has(book)) {
+        bookMap.set(book, bookIndex);
+        bookMapInv.set(bookIndex, book);
+        bookIndex += 1;
+      }
+      return {book: bookMap.get(book) as number, chapter: +chapter, verse: +verse, word: wordMap.get(stem) as number, text: word};
+    });
+  }).flat();
+};
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -241,106 +244,110 @@ const fadeInput = document.getElementById("fade") as HTMLInputElement;
 const copyLink = document.getElementById("copy-link") as HTMLInputElement;
 const copyLinkButton = document.getElementById("copy-link-button") as HTMLButtonElement;
 const shareButton = document.getElementById("share-button") as HTMLButtonElement;
-
-sizeInput.addEventListener("input", () => {
-  minSize = +sizeInput.value;
-  draw();
-  drawHover();
-});
-
-fadeInput.addEventListener("input", () => {
-  wordOpacity = +fadeInput.value;
-  draw();
-  drawHover();
-});
-
-shareButton.addEventListener("click", () => {
-  let params = "?";
-  searches.forEach((s, i) => {
-    params += `&search${i}=` + encodeURIComponent(s.value);
-  });
-  searchColors.forEach((c, i) => {
-    params += `&color${i}=` + encodeURIComponent(c.value);
-  });
-  params += `&size=${minSize}`;
-  params += `&fade=${wordOpacity}`;
-  copyLink.value = window.location.origin + params;
-});
-
-copyLinkButton.addEventListener("click", () => {
-  copyLink.select();
-  copyLink.setSelectionRange(0, 99999);
-  navigator.clipboard.writeText(copyLink.value);
-});
-
-searchColors.forEach((s, i) => {
-  s.value = d3.schemeTableau10[i];
-});
-
 const info = document.getElementById("info") as HTMLDivElement;
 
-// Load params from url
+fetch("kjv.json").then(d => d.json().then(d => {
+  words = versesToWords(d);
 
-function getQueryVariable(variable: string) {
-  let query = window.location.search.substring(1);
-  let vars = query.split('&');
-  for (let i = 0; i < vars.length; i++) {
-    let pair = vars[i].split('=');
-    if (decodeURIComponent(pair[0]) == variable) {
-      return decodeURIComponent(pair[1]);
+  sizeInput.addEventListener("input", () => {
+    minSize = +sizeInput.value;
+    draw();
+    drawHover();
+  });
+
+  fadeInput.addEventListener("input", () => {
+    wordOpacity = +fadeInput.value;
+    draw();
+    drawHover();
+  });
+
+  shareButton.addEventListener("click", () => {
+    let params = "?";
+    searches.forEach((s, i) => {
+      params += `&search${i}=` + encodeURIComponent(s.value);
+    });
+    searchColors.forEach((c, i) => {
+      params += `&color${i}=` + encodeURIComponent(c.value);
+    });
+    params += `&size=${minSize}`;
+    params += `&fade=${wordOpacity}`;
+    copyLink.value = window.location.origin + params;
+  });
+
+  copyLinkButton.addEventListener("click", () => {
+    copyLink.select();
+    copyLink.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyLink.value);
+  });
+
+  searchColors.forEach((s, i) => {
+    s.value = d3.schemeTableau10[i];
+  });
+
+  // Load params from url
+
+  function getQueryVariable(variable: string) {
+    let query = window.location.search.substring(1);
+    let vars = query.split('&');
+    for (let i = 0; i < vars.length; i++) {
+      let pair = vars[i].split('=');
+      if (decodeURIComponent(pair[0]) == variable) {
+        return decodeURIComponent(pair[1]);
+      }
     }
+    return undefined;
   }
-  return undefined;
-}
 
-searches.forEach((s, i) => {
-  let val = getQueryVariable(`search${i}`);
-  if (val !== undefined) {
-    s.value = val;
+  searches.forEach((s, i) => {
+    let val = getQueryVariable(`search${i}`);
+    if (val !== undefined) {
+      s.value = val;
+    }
+  });
+
+  searchColors.forEach((c, i) => {
+    let val = getQueryVariable(`color${i}`);
+    if (val !== undefined) {
+      c.value = val;
+    }
+  });
+
+  let sizeVal = getQueryVariable("size");
+  if (sizeVal !== undefined) {
+    minSize = +sizeVal;
+    sizeInput.value = sizeVal;
   }
-});
 
-searchColors.forEach((c, i) => {
-  let val = getQueryVariable(`color${i}`);
-  if (val !== undefined) {
-    c.value = val;
+  let fadeVal = getQueryVariable("fade");
+  if (fadeVal !== undefined) {
+    wordOpacity = +fadeVal;
+    fadeInput.value = fadeVal;
   }
-});
 
-let sizeVal = getQueryVariable("size");
-if (sizeVal !== undefined) {
-  minSize = +sizeVal;
-  sizeInput.value = sizeVal;
-}
+  searches.forEach(s => s.addEventListener("input", () => {
+    draw();
+    drawHover();
+  }));
 
-let fadeVal = getQueryVariable("fade");
-if (fadeVal !== undefined) {
-  wordOpacity = +fadeVal;
-  fadeInput.value = fadeVal;
-}
+  searchColors.forEach(s => s.addEventListener("input", () => {
+    draw();
+    drawHover();
+  }));
 
-initializeView();
+  function brush(event: MouseEvent) {
+    const {section, row, col} = wordLocation.backwardCoords([event.offsetX, event.offsetY], size);
+    hoverIndex = wordLocation.backward([event.offsetX, event.offsetY], size);
+    hoverSection = section;
+    hoverRow = Math.floor(row - Math.min(hoverRows / 2));
+    drawHover();
+  }
 
-window.addEventListener("resize", initializeView);
+  hoverCanvas.addEventListener("mousemove", event => {
+    brush(event);
+  });
 
-searches.forEach(s => s.addEventListener("input", () => {
-  draw();
-  drawHover();
+  window.addEventListener("resize", initializeView);
+  initializeView();
 }));
 
-searchColors.forEach(s => s.addEventListener("input", () => {
-  draw();
-  drawHover();
-}));
 
-function brush(event: MouseEvent) {
-  const {section, row, col} = wordLocation.backwardCoords([event.offsetX, event.offsetY], size);
-  hoverIndex = wordLocation.backward([event.offsetX, event.offsetY], size);
-  hoverSection = section;
-  hoverRow = Math.floor(row - Math.min(hoverRows / 2));
-  drawHover();
-}
-
-hoverCanvas.addEventListener("mousemove", event => {
-  brush(event);
-});
