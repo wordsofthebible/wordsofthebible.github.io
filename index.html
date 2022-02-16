@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" style="margin:0px;height:100%">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Words of the Bible</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.0.6/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body style="margin:0px;height:100%">
+    <div class="navbar bg-base-200">
+      <div class="navbar-start">
+        <div class="form-control pr-3">
+          <label class="label">
+            <span class="label-text font-bold">Words of the Bible</span>
+          </label>
+          <label class="input-group">
+            <input id="search0" placeholder="Search" class="input input-bordered input-sm">
+            <input id="color0" type="color" class="btn btn-sm btn-square btn-ghost">
+          </label>
+        </div>
+        <div class="form-control pr-3">
+          <label class="label">
+            <span class="label-text">&nbsp;</span>
+          </label>
+          <label class="input-group">
+            <input id="search1" placeholder="Search" class="input input-bordered input-sm">
+            <input id="color1" type="color" class="btn btn-sm btn-square btn-ghost">
+          </label>
+        </div>
+        <div class="form-control pr-3">
+          <label class="label">
+            <span class="label-text">&nbsp;</span>
+          </label>
+          <label class="input-group">
+            <input id="search2" placeholder="Search" class="input input-bordered input-sm">
+            <input id="color2" type="color" class="btn btn-sm btn-square btn-ghost">
+          </label>
+        </div>
+        <div class="form-control pr-3">
+          <label class="label">
+            <span class="label-text">&nbsp;</span>
+          </label>
+          <label class="input-group">
+            <input id="search3" placeholder="Search" class="input input-bordered input-sm">
+            <input id="color3" type="color" class="btn btn-sm btn-square btn-ghost">
+          </label>
+        </div>
+        <div class="form-control pr-5">
+          <label class="label">
+            <span class="label-text">Size</span>
+          </label>
+          <input id="size" type="range" class="range w-24" value="1" min="0" max="20">
+        </div>
+        <div class="form-control pr-5">
+          <label class="label">
+            <span class="label-text">Strength</span>
+          </label>
+          <input id="fade" type="range" class="range w-24" step="0.1" min="0" max="1" value="1">
+        </div>
+      </div>
+      <div class="navbar-end">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">&nbsp;</span>
+          </label>
+          <label id="share-button" for="share-modal" class="btn btn-sm modal-button">Share</label>
+        </div>
+      </div>
+    </div>
+    <canvas id="canvas"     style="position:absolute;top:84px;left:0px;width:100vw;height:calc(100vh - 84px)"></canvas>
+    <canvas id="background" style="position:absolute;top:84px;left:0px;width:100vw;height:calc(100vh - 84px)"></canvas>
+    <canvas id="hover"      style="position:absolute;top:84px;left:0px;width:100vw;height:calc(100vh - 84px)"></canvas>
+    <div id="info" style="position:absolute;top:0px;left:0px"></div>
+    <script type="module">
+      import browserTS from 'https://unpkg.com/browser-ts';
+      browserTS('./sw.js');
+    </script>
+    <script type="module" src="./index.ts"></script>
+
+
+    <input type="checkbox" id="share-modal" class="modal-toggle">
+    <div class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Share</h3>
+        <p class="py-4">Copy the following link to share your view with others.</p>
+        <input id="copy-link" class="input input-bordered input-sm pr-3">
+        <button id="copy-link-button" class="btn btn-sm">Copy</button>
+        <div class="modal-action">
+          <label for="share-modal" class="btn btn-sm">Done</label>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
