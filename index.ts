@@ -18,30 +18,38 @@ type Word = {
 const normalizeWord = (d: string) => d.toLowerCase();
 
 
-const wordMap = new Map<string, number>();
-const bookMap = new Map<string, number>();
-const bookMapInv = new Map<number, string>();
+let wordMap: { [word: string]: number } = {}
+let wordToIndices: { [word: number]: number[] } = {}
+let bookMap: { [book: string]: number } = {}
+let bookMapInv: { [book: number]: string } = {}
 let words = [] as Word[];
 
 const versesToWords = (verses: Verse[]) => {
   let wordIndex = 0;
   let bookIndex = 0;
-  return verses.map(v => {
+  let arrayIndex = 0;
+  return verses.flatMap(v => {
     const [book, chapter, verse] = v.ref.split(".");
     return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
       const stem = normalizeWord(word);
-      if (!wordMap.has(stem)) {
-        wordMap.set(stem, wordIndex);
+      if (wordMap[stem] === undefined) {
+        wordMap[stem] = wordIndex;
         wordIndex += 1;
       }
-      if (!bookMap.has(book)) {
-        bookMap.set(book, bookIndex);
-        bookMapInv.set(bookIndex, book);
+      if (bookMap[book] === undefined) {
+        bookMap[book] = bookIndex;
+        bookMapInv[bookIndex] = book;
         bookIndex += 1;
       }
-      return {book: bookMap.get(book) as number, chapter: +chapter, verse: +verse, word: wordMap.get(stem) as number, text: word};
+      if (wordToIndices[wordMap[stem]] === undefined) {
+        wordToIndices[wordMap[stem]] = []
+      }
+      wordToIndices[wordMap[stem]].push(arrayIndex);
+
+      arrayIndex += 1;
+      return {book: bookMap[book] as number, chapter: +chapter, verse: +verse, word: wordMap[stem] as number, text: word};
     });
-  }).flat();
+  });
 };
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -54,8 +62,6 @@ const hoverContext = hoverCanvas.getContext("2d") as CanvasRenderingContext2D;
 let padding = 50;
 let sectionWidth = 10;
 let hoverSize = {x: 50, y: 25};
-let minSize = 0.5;
-let wordOpacity = 1.0;
 let hoverOpacity = 0.8;
 
 let size = 1;
@@ -119,16 +125,16 @@ const wordLocation = {
 
 const drawBackground = () => {
   backContext.clearRect(0, 0, backCanvas.width, backCanvas.height);
-  words.forEach((w, i) => {
-    const [x, y] = wordLocation.forward(i, size);
-    // let color = chapterColor(w.book);
-    let color = d3.interpolateGreys(0.1 + 0.5*(((w.book * 37) % 61) / 60));
-    // if (w.book < 39) {
-    //   color = (d3.color(color) as d3.RGBColor).darker(1.5).toString();
-    // }
-    backContext.fillStyle = color;
-    // backContext.fillRect(x, y, size, size);
-  });
+  // words.forEach((w, i) => {
+  //   const [x, y] = wordLocation.forward(i, size);
+  //   // let color = chapterColor(w.book);
+  //   let color = d3.interpolateGreys(0.1 + 0.5*(((w.book * 37) % 61) / 60));
+  //   // if (w.book < 39) {
+  //   //   color = (d3.color(color) as d3.RGBColor).darker(1.5).toString();
+  //   // }
+  //   backContext.fillStyle = color;
+  //   // backContext.fillRect(x, y, size, size);
+  // });
 
   let curBook = -1;
   const lineColor = "rgb(220,220,220)";
@@ -155,31 +161,76 @@ const drawBackground = () => {
   words.forEach((w, i) => {
     if (w.book !== curBook) {
       const [x, y] = wordLocation.forward(i - (i % sectionWidth), size);
-      backContext.fillText(bookMapInv.get(w.book) || "", x + 2, y + 10);
+      backContext.fillText(bookMapInv[w.book] || "", x + 2, y + 10);
       curBook = w.book;
     }
   });
 
 };
 
-const draw = () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+let runningTimeout: number | undefined = undefined;
 
+const draw = () => {
   const stems = searches.map(d => d.value).map(normalizeWord);
-  words.forEach((w, i) => {
-    const [x, y] = wordLocation.forward(i, size);
-    for (let s = 0; s < stems.length; s += 1) {
-      if (w.word === wordMap.get(stems[s])) {
-        let color = d3.color(searchColors[s].value) as d3.RGBColor;
-        color.opacity = wordOpacity;
-        ctx.fillStyle = color.toString();
-        ctx.beginPath();
-        ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // ctx.fillRect(x - minSize / 2, y - minSize / 2, size + minSize, size + minSize);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (runningTimeout !== undefined) {
+    clearTimeout(runningTimeout)
+  }
+  runningTimeout = undefined;
+
+  let start = 0;
+  const amount = 2000;
+
+  let stemI = 0;
+
+  const run = () => {
+    let beginingStart = start;
+    while (start - beginingStart < amount) {
+      const stem = stems[stemI];
+      if (stem === undefined) {
+        console.log(stems, stemI);
+        throw new Error("stem is undefined");
+      }
+      const word = wordMap[stem];
+      if (word === undefined) {
+        stemI += 1;
+        if (stemI >= stems.length) {
+          return;
+        }
+        continue;
+      }
+      const wordIndices = wordToIndices[word];
+      const color = d3.color(searchColors[stemI].value) as d3.RGBColor;
+      start = drawAmount(color, wordIndices, start, amount);
+      // console.log('start', start);
+      if (start === wordIndices.length) {
+        start = 0;
+        beginingStart = 0;
+        stemI += 1;
+      }
+      if (stemI >= stems.length) {
+        return;
       }
     }
-  });
+    runningTimeout = setTimeout(run, 0)
+  }
+
+  run()
+
+}
+
+const drawAmount = (color: d3.RGBColor, wordIndices: number[], startInd: number, amount: number) => {
+  let i = startInd;
+  for (i = startInd; i < wordIndices.length && i - startInd < amount; i++) {
+    const wordI = wordIndices[i];
+    const [x, y] = wordLocation.forward(wordI, size);
+    color.opacity = +fadeInput.value;
+    ctx.fillStyle = color.toString();
+    ctx.beginPath();
+    ctx.ellipse(x + size / 2, y + size / 2, size + +sizeInput.value, size + +sizeInput.value, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return i;
 };
 
 const drawHover = () => {
@@ -198,7 +249,7 @@ const drawHover = () => {
   }
 
   const start = words[startIndex];
-  const ref = `${bookMapInv.get(start.book)} ${start.chapter}:${start.verse}`;
+  const ref = `${bookMapInv[start.book]} ${start.chapter}:${start.verse}`;
   hoverContext.fillText(ref, padding + xShift, padding - 3);
 
   words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i) => {
@@ -212,7 +263,7 @@ const drawHover = () => {
     let backgroundColor = `rgba(255,255,255,${hoverOpacity})`;
     let textColor = [0, 0, 0];
     for (let s = 0; s < stems.length; s += 1) {
-      if (w.word === wordMap.get(stems[s])) {
+      if (w.word === wordMap[stems[s]]) {
         let color = d3.color(searchColors[s].value) as d3.RGBColor;
         color.opacity = hoverOpacity;
         backgroundColor = color.toString();
@@ -250,13 +301,11 @@ fetch("kjv.json").then(d => d.json().then(d => {
   words = versesToWords(d);
 
   sizeInput.addEventListener("input", () => {
-    minSize = +sizeInput.value;
     draw();
     drawHover();
   });
 
   fadeInput.addEventListener("input", () => {
-    wordOpacity = +fadeInput.value;
     draw();
     drawHover();
   });
@@ -269,8 +318,8 @@ fetch("kjv.json").then(d => d.json().then(d => {
     searchColors.forEach((c, i) => {
       params += `&color${i}=` + encodeURIComponent(c.value);
     });
-    params += `&size=${minSize}`;
-    params += `&fade=${wordOpacity}`;
+    params += `&size=${sizeInput.value}`;
+    params += `&fade=${fadeInput.value}`;
     copyLink.value = window.location.origin + params;
   });
 
@@ -280,49 +329,7 @@ fetch("kjv.json").then(d => d.json().then(d => {
     navigator.clipboard.writeText(copyLink.value);
   });
 
-  searchColors.forEach((s, i) => {
-    s.value = d3.schemeTableau10[i];
-  });
-
-  // Load params from url
-
-  function getQueryVariable(variable: string) {
-    let query = window.location.search.substring(1);
-    let vars = query.split('&');
-    for (let i = 0; i < vars.length; i++) {
-      let pair = vars[i].split('=');
-      if (decodeURIComponent(pair[0]) == variable) {
-        return decodeURIComponent(pair[1]);
-      }
-    }
-    return undefined;
-  }
-
-  searches.forEach((s, i) => {
-    let val = getQueryVariable(`search${i}`);
-    if (val !== undefined) {
-      s.value = val;
-    }
-  });
-
-  searchColors.forEach((c, i) => {
-    let val = getQueryVariable(`color${i}`);
-    if (val !== undefined) {
-      c.value = val;
-    }
-  });
-
-  let sizeVal = getQueryVariable("size");
-  if (sizeVal !== undefined) {
-    minSize = +sizeVal;
-    sizeInput.value = sizeVal;
-  }
-
-  let fadeVal = getQueryVariable("fade");
-  if (fadeVal !== undefined) {
-    wordOpacity = +fadeVal;
-    fadeInput.value = fadeVal;
-  }
+  
 
   searches.forEach(s => s.addEventListener("input", () => {
     draw();
@@ -350,4 +357,45 @@ fetch("kjv.json").then(d => d.json().then(d => {
   initializeView();
 }));
 
+searchColors.forEach((s, i) => {
+  s.value = d3.schemeTableau10[i];
+});
+
+// Load params from url
+
+function getQueryVariable(variable: string) {
+  let query = window.location.search.substring(1);
+  let vars = query.split('&');
+  for (let i = 0; i < vars.length; i++) {
+    let pair = vars[i].split('=');
+    if (decodeURIComponent(pair[0]) == variable) {
+      return decodeURIComponent(pair[1]);
+    }
+  }
+  return undefined;
+}
+
+searches.forEach((s, i) => {
+  let val = getQueryVariable(`search${i}`);
+  if (val !== undefined) {
+    s.value = val;
+  }
+});
+
+searchColors.forEach((c, i) => {
+  let val = getQueryVariable(`color${i}`);
+  if (val !== undefined) {
+    c.value = val;
+  }
+});
+
+let sizeVal = getQueryVariable("size");
+if (sizeVal !== undefined) {
+  sizeInput.value = sizeVal;
+}
+
+let fadeVal = getQueryVariable("fade");
+if (fadeVal !== undefined) {
+  fadeInput.value = fadeVal;
+}
 

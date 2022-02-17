@@ -1,3 +1,7 @@
+// deno-fmt-ignore-file
+// deno-lint-ignore-file
+// This code was bundled using `deno bundle` and it's not recommended to edit it manually
+
 function ascending(a, b) {
     return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -2601,9 +2605,9 @@ Path.prototype = path.prototype = {
 };
 Array.prototype.slice;
 var prefix = "$";
-function Map1() {}
-Map1.prototype = map.prototype = {
-    constructor: Map1,
+function Map() {}
+Map.prototype = map.prototype = {
+    constructor: Map,
     has: function(key) {
         return prefix + key in this;
     },
@@ -2653,8 +2657,8 @@ Map1.prototype = map.prototype = {
     }
 };
 function map(object2, f) {
-    var map2 = new Map1();
-    if (object2 instanceof Map1) object2.each(function(value54, key2) {
+    var map2 = new Map();
+    if (object2 instanceof Map) object2.each(function(value54, key2) {
         map2.set(key2, value54);
     });
     else if (Array.isArray(object2)) {
@@ -5889,7 +5893,7 @@ ramp(scheme$l);
 var scheme$m = new Array(3).concat("e5f5e0a1d99b31a354", "edf8e9bae4b374c476238b45", "edf8e9bae4b374c47631a354006d2c", "edf8e9c7e9c0a1d99b74c47631a354006d2c", "edf8e9c7e9c0a1d99b74c47641ab5d238b45005a32", "f7fcf5e5f5e0c7e9c0a1d99b74c47641ab5d238b45005a32", "f7fcf5e5f5e0c7e9c0a1d99b74c47641ab5d238b45006d2c00441b").map(colors);
 ramp(scheme$m);
 var scheme$n = new Array(3).concat("f0f0f0bdbdbd636363", "f7f7f7cccccc969696525252", "f7f7f7cccccc969696636363252525", "f7f7f7d9d9d9bdbdbd969696636363252525", "f7f7f7d9d9d9bdbdbd969696737373525252252525", "fffffff0f0f0d9d9d9bdbdbd969696737373525252252525", "fffffff0f0f0d9d9d9bdbdbd969696737373525252252525000000").map(colors);
-var Greys = ramp(scheme$n);
+ramp(scheme$n);
 var scheme$o = new Array(3).concat("efedf5bcbddc756bb1", "f2f0f7cbc9e29e9ac86a51a3", "f2f0f7cbc9e29e9ac8756bb154278f", "f2f0f7dadaebbcbddc9e9ac8756bb154278f", "f2f0f7dadaebbcbddc9e9ac8807dba6a51a34a1486", "fcfbfdefedf5dadaebbcbddc9e9ac8807dba6a51a34a1486", "fcfbfdefedf5dadaebbcbddc9e9ac8807dba6a51a354278f3f007d").map(colors);
 ramp(scheme$o);
 var scheme$p = new Array(3).concat("fee0d2fc9272de2d26", "fee5d9fcae91fb6a4acb181d", "fee5d9fcae91fb6a4ade2d26a50f15", "fee5d9fcbba1fc9272fb6a4ade2d26a50f15", "fee5d9fcbba1fc9272fb6a4aef3b2ccb181d99000d", "fff5f0fee0d2fcbba1fc9272fb6a4aef3b2ccb181d99000d", "fff5f0fee0d2fcbba1fc9272fb6a4aef3b2ccb181da50f1567000d").map(colors);
@@ -7561,35 +7565,42 @@ function transform(node) {
 }
 const normalizeWord = (d)=>d.toLowerCase()
 ;
-const wordMap = new Map();
-const bookMap = new Map();
-const bookMapInv = new Map();
+let wordMap = {};
+let wordToIndices = {};
+let bookMap = {};
+let bookMapInv = {};
 let words = [];
 const versesToWords = (verses)=>{
     let wordIndex = 0;
     let bookIndex = 0;
-    return verses.map((v)=>{
+    let arrayIndex = 0;
+    return verses.flatMap((v)=>{
         const [book, chapter, verse] = v.ref.split(".");
         return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word)=>{
             const stem = normalizeWord(word);
-            if (!wordMap.has(stem)) {
-                wordMap.set(stem, wordIndex);
+            if (wordMap[stem] === undefined) {
+                wordMap[stem] = wordIndex;
                 wordIndex += 1;
             }
-            if (!bookMap.has(book)) {
-                bookMap.set(book, bookIndex);
-                bookMapInv.set(bookIndex, book);
+            if (bookMap[book] === undefined) {
+                bookMap[book] = bookIndex;
+                bookMapInv[bookIndex] = book;
                 bookIndex += 1;
             }
+            if (wordToIndices[wordMap[stem]] === undefined) {
+                wordToIndices[wordMap[stem]] = [];
+            }
+            wordToIndices[wordMap[stem]].push(arrayIndex);
+            arrayIndex += 1;
             return {
-                book: bookMap.get(book),
+                book: bookMap[book],
                 chapter: +chapter,
                 verse: +verse,
-                word: wordMap.get(stem),
+                word: wordMap[stem],
                 text: word
             };
         });
-    }).flat();
+    });
 };
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -7603,8 +7614,6 @@ let hoverSize = {
     x: 50,
     y: 25
 };
-let minSize = 0.5;
-let wordOpacity = 1;
 let hoverOpacity = 0.8;
 let size = 1;
 let columns = 1;
@@ -7676,11 +7685,6 @@ const wordLocation = {
 };
 const drawBackground = ()=>{
     backContext.clearRect(0, 0, backCanvas.width, backCanvas.height);
-    words.forEach((w, i)=>{
-        const [x, y] = wordLocation.forward(i, size);
-        let color1 = Greys(0.1 + 0.5 * (w.book * 37 % 61 / 60));
-        backContext.fillStyle = color1;
-    });
     let curBook = -1;
     const lineColor = "rgb(220,220,220)";
     backContext.fillStyle = lineColor;
@@ -7705,28 +7709,67 @@ const drawBackground = ()=>{
     words.forEach((w, i)=>{
         if (w.book !== curBook) {
             const [x, y] = wordLocation.forward(i - i % sectionWidth, size);
-            backContext.fillText(bookMapInv.get(w.book) || "", x + 2, y + 10);
+            backContext.fillText(bookMapInv[w.book] || "", x + 2, y + 10);
             curBook = w.book;
         }
     });
 };
+let runningTimeout = undefined;
 const draw = ()=>{
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const stems = searches.map((d)=>d.value
     ).map(normalizeWord);
-    words.forEach((w, i)=>{
-        const [x, y] = wordLocation.forward(i, size);
-        for(let s = 0; s < stems.length; s += 1){
-            if (w.word === wordMap.get(stems[s])) {
-                let color2 = color(searchColors[s].value);
-                color2.opacity = wordOpacity;
-                ctx.fillStyle = color2.toString();
-                ctx.beginPath();
-                ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
-                ctx.fill();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (runningTimeout !== undefined) {
+        clearTimeout(runningTimeout);
+    }
+    runningTimeout = undefined;
+    let start26 = 0;
+    const amount = 2000;
+    let stemI = 0;
+    const run = ()=>{
+        let beginingStart = start26;
+        while(start26 - beginingStart < 2000){
+            const stem = stems[stemI];
+            if (stem === undefined) {
+                console.log(stems, stemI);
+                throw new Error("stem is undefined");
+            }
+            const word = wordMap[stem];
+            if (word === undefined) {
+                stemI += 1;
+                if (stemI >= stems.length) {
+                    return;
+                }
+                continue;
+            }
+            const wordIndices = wordToIndices[word];
+            const color1 = color(searchColors[stemI].value);
+            start26 = drawAmount(color1, wordIndices, start26, amount);
+            if (start26 === wordIndices.length) {
+                start26 = 0;
+                beginingStart = 0;
+                stemI += 1;
+            }
+            if (stemI >= stems.length) {
+                return;
             }
         }
-    });
+        runningTimeout = setTimeout(run, 0);
+    };
+    run();
+};
+const drawAmount = (color3, wordIndices, startInd, amount)=>{
+    let i = startInd;
+    for(i = startInd; i < wordIndices.length && i - startInd < amount; i++){
+        const wordI = wordIndices[i];
+        const [x, y] = wordLocation.forward(wordI, size);
+        color3.opacity = +fadeInput.value;
+        ctx.fillStyle = color3.toString();
+        ctx.beginPath();
+        ctx.ellipse(x + size / 2, y + size / 2, size + +sizeInput.value, size + +sizeInput.value, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    return i;
 };
 const drawHover = ()=>{
     hoverContext.clearRect(0, 0, canvas.width, canvas.height);
@@ -7742,8 +7785,8 @@ const drawHover = ()=>{
     if (hoverIndex < words.length / 2) {
         xShift = canvas.clientWidth - 2 * padding - hoverSize.x * sectionWidth;
     }
-    const start26 = words[startIndex];
-    const ref = `${bookMapInv.get(start26.book)} ${start26.chapter}:${start26.verse}`;
+    const start27 = words[startIndex];
+    const ref = `${bookMapInv[start27.book]} ${start27.chapter}:${start27.verse}`;
     hoverContext.fillText(ref, padding + xShift, padding - 3);
     words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i)=>{
         let [x, y] = wordLocation.forward(startIndex + i, size);
@@ -7758,10 +7801,10 @@ const drawHover = ()=>{
             0
         ];
         for(let s = 0; s < stems.length; s += 1){
-            if (w.word === wordMap.get(stems[s])) {
-                let color5 = color(searchColors[s].value);
-                color5.opacity = hoverOpacity;
-                backgroundColor = color5.toString();
+            if (w.word === wordMap[stems[s]]) {
+                let color4 = color(searchColors[s].value);
+                color4.opacity = hoverOpacity;
+                backgroundColor = color4.toString();
                 textColor = [
                     255,
                     255,
@@ -7796,12 +7839,10 @@ const info = document.getElementById("info");
 fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
         words = versesToWords(d);
         sizeInput.addEventListener("input", ()=>{
-            minSize = +sizeInput.value;
             draw();
             drawHover();
         });
         fadeInput.addEventListener("input", ()=>{
-            wordOpacity = +fadeInput.value;
             draw();
             drawHover();
         });
@@ -7813,8 +7854,8 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
             searchColors.forEach((c, i)=>{
                 params += `&color${i}=` + encodeURIComponent(c.value);
             });
-            params += `&size=${minSize}`;
-            params += `&fade=${wordOpacity}`;
+            params += `&size=${sizeInput.value}`;
+            params += `&fade=${fadeInput.value}`;
             copyLink.value = window.location.origin + params;
         });
         copyLinkButton.addEventListener("click", ()=>{
@@ -7822,42 +7863,6 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
             copyLink.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(copyLink.value);
         });
-        searchColors.forEach((s, i)=>{
-            s.value = Tableau10[i];
-        });
-        function getQueryVariable(variable) {
-            let query = window.location.search.substring(1);
-            let vars = query.split('&');
-            for(let i = 0; i < vars.length; i++){
-                let pair = vars[i].split('=');
-                if (decodeURIComponent(pair[0]) == variable) {
-                    return decodeURIComponent(pair[1]);
-                }
-            }
-            return undefined;
-        }
-        searches.forEach((s, i)=>{
-            let val = getQueryVariable(`search${i}`);
-            if (val !== undefined) {
-                s.value = val;
-            }
-        });
-        searchColors.forEach((c, i)=>{
-            let val = getQueryVariable(`color${i}`);
-            if (val !== undefined) {
-                c.value = val;
-            }
-        });
-        let sizeVal = getQueryVariable("size");
-        if (sizeVal !== undefined) {
-            minSize = +sizeVal;
-            sizeInput.value = sizeVal;
-        }
-        let fadeVal = getQueryVariable("fade");
-        if (fadeVal !== undefined) {
-            wordOpacity = +fadeVal;
-            fadeInput.value = fadeVal;
-        }
         searches.forEach((s)=>s.addEventListener("input", ()=>{
                 draw();
                 drawHover();
@@ -7888,4 +7893,37 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
         initializeView();
     })
 );
-
+searchColors.forEach((s, i)=>{
+    s.value = Tableau10[i];
+});
+function getQueryVariable(variable) {
+    let query = window.location.search.substring(1);
+    let vars = query.split('&');
+    for(let i = 0; i < vars.length; i++){
+        let pair = vars[i].split('=');
+        if (decodeURIComponent(pair[0]) == variable) {
+            return decodeURIComponent(pair[1]);
+        }
+    }
+    return undefined;
+}
+searches.forEach((s, i)=>{
+    let val = getQueryVariable(`search${i}`);
+    if (val !== undefined) {
+        s.value = val;
+    }
+});
+searchColors.forEach((c, i)=>{
+    let val = getQueryVariable(`color${i}`);
+    if (val !== undefined) {
+        c.value = val;
+    }
+});
+let sizeVal = getQueryVariable("size");
+if (sizeVal !== undefined) {
+    sizeInput.value = sizeVal;
+}
+let fadeVal = getQueryVariable("fade");
+if (fadeVal !== undefined) {
+    fadeInput.value = fadeVal;
+}
