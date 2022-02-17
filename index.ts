@@ -19,6 +19,7 @@ const normalizeWord = (d: string) => d.toLowerCase();
 
 
 let wordMap: { [word: string]: number } = {}
+let wordToIndices: { [word: number]: number[] } = {}
 let bookMap: { [book: string]: number } = {}
 let bookMapInv: { [book: number]: string } = {}
 let words = [] as Word[];
@@ -26,6 +27,7 @@ let words = [] as Word[];
 const versesToWords = (verses: Verse[]) => {
   let wordIndex = 0;
   let bookIndex = 0;
+  let arrayIndex = 0;
   return verses.flatMap(v => {
     const [book, chapter, verse] = v.ref.split(".");
     return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
@@ -39,6 +41,12 @@ const versesToWords = (verses: Verse[]) => {
         bookMapInv[bookIndex] = book;
         bookIndex += 1;
       }
+      if (wordToIndices[wordMap[stem]] === undefined) {
+        wordToIndices[wordMap[stem]] = []
+      }
+      wordToIndices[wordMap[stem]].push(arrayIndex);
+
+      arrayIndex += 1;
       return {book: bookMap[book] as number, chapter: +chapter, verse: +verse, word: wordMap[stem] as number, text: word};
     });
   });
@@ -162,51 +170,67 @@ const drawBackground = () => {
 
 };
 
-const renderedAt = new Set();
-
-let runningTimeouts: number[] = [];
+let runningTimeout: number | undefined = undefined;
 
 const draw = () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  runningTimeouts.forEach((t) => clearTimeout(t));
-  runningTimeouts = [];
-  renderedAt.clear();
-  
-  let start = 0;
-  const amount = 2500;
-  while (start + amount < words.length) {
-    const startc = start;
-    const amountc = amount;
-    const timeout = setTimeout(() => {
-      if (!renderedAt.has(startc)) {
-        drawPart(startc, amountc);
-        renderedAt.add(startc);
-      }
-
-      runningTimeouts = runningTimeouts.filter(v => v !== timeout);
-    }, 0)
-    runningTimeouts.push(timeout);
-    start += amount;
-  }
-}
-
-const drawPart = (start: number, amount: number) => {
   const stems = searches.map(d => d.value).map(normalizeWord);
-  for (let wordI = start; wordI < start + amount && wordI < words.length; wordI++) {
-    const w = words[wordI];
-    const [x, y] = wordLocation.forward(wordI, size);
-    for (let s = 0; s < stems.length; s += 1) {
-      if (w.word === wordMap[stems[s]]) {
-        let color = d3.color(searchColors[s].value) as d3.RGBColor;
-        color.opacity = wordOpacity;
-        ctx.fillStyle = color.toString();
-        ctx.beginPath();
-        ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // ctx.fillRect(x - minSize / 2, y - minSize / 2, size + minSize, size + minSize);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (runningTimeout !== undefined) {
+    clearTimeout(runningTimeout)
+  }
+  runningTimeout = undefined;
+
+  let start = 0;
+  const amount = 2000;
+
+  let stemI = 0;
+
+  const run = () => {
+    const beginingStart = start;
+    while (start - beginingStart < amount) {
+      const stem = stems[stemI];
+      if (stem === undefined) {
+        console.log(stems, stemI);
+        throw new Error("stem is undefined");
+      }
+      const word = wordMap[stem];
+      if (word === undefined) {
+        stemI += 1;
+        if (stemI >= stems.length) {
+          return;
+        }
+        continue;
+      }
+      const wordIndices = wordToIndices[word];
+      const color = d3.color(searchColors[stemI].value) as d3.RGBColor;
+      start = drawAmount(color, wordIndices, start, amount);
+      if (start === wordIndices.length) {
+        start = 0;
+        stemI += 1;
+      }
+      if (stemI >= stems.length) {
+        return;
       }
     }
+    runningTimeout = setTimeout(run, 0)
   }
+
+  run()
+
+}
+
+const drawAmount = (color: d3.RGBColor, wordIndices: number[], startInd: number, amount: number) => {
+  let i = startInd;
+  for (i = startInd; i < wordIndices.length && i - startInd < amount; i++) {
+    const wordI = wordIndices[i];
+    const [x, y] = wordLocation.forward(wordI, size);
+    color.opacity = wordOpacity;
+    ctx.fillStyle = color.toString();
+    ctx.beginPath();
+    ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return i;
 };
 
 const drawHover = () => {

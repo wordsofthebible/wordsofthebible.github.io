@@ -2668,10 +2668,10 @@ function map(object2, f) {
     } else if (object2) for(var key in object2)map2.set(key, object2[key]);
     return map2;
 }
-function Set1() {}
+function Set() {}
 var proto = map.prototype;
-Set1.prototype = set2.prototype = {
-    constructor: Set1,
+Set.prototype = set2.prototype = {
+    constructor: Set,
     has: proto.has,
     add: function(value55) {
         value55 += "";
@@ -2686,8 +2686,8 @@ Set1.prototype = set2.prototype = {
     each: proto.each
 };
 function set2(object3, f) {
-    var set21 = new Set1();
-    if (object3 instanceof Set1) object3.each(function(value56) {
+    var set21 = new Set();
+    if (object3 instanceof Set) object3.each(function(value56) {
         set21.add(value56);
     });
     else if (object3) {
@@ -7566,12 +7566,14 @@ function transform(node) {
 const normalizeWord = (d)=>d.toLowerCase()
 ;
 let wordMap = {};
+let wordToIndices = {};
 let bookMap = {};
 let bookMapInv = {};
 let words = [];
 const versesToWords = (verses)=>{
     let wordIndex = 0;
     let bookIndex = 0;
+    let arrayIndex = 0;
     return verses.flatMap((v)=>{
         const [book, chapter, verse] = v.ref.split(".");
         return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word)=>{
@@ -7585,6 +7587,11 @@ const versesToWords = (verses)=>{
                 bookMapInv[bookIndex] = book;
                 bookIndex += 1;
             }
+            if (wordToIndices[wordMap[stem]] === undefined) {
+                wordToIndices[wordMap[stem]] = [];
+            }
+            wordToIndices[wordMap[stem]].push(arrayIndex);
+            arrayIndex += 1;
             return {
                 book: bookMap[book],
                 chapter: +chapter,
@@ -7709,47 +7716,61 @@ const drawBackground = ()=>{
         }
     });
 };
-const renderedAt = new Set();
-let runningTimeouts = [];
+let runningTimeout = undefined;
 const draw = ()=>{
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    runningTimeouts.forEach((t)=>clearTimeout(t)
-    );
-    runningTimeouts = [];
-    renderedAt.clear();
-    let start26 = 0;
-    const amount = 2500;
-    while(start26 + 2500 < words.length){
-        const startc = start26;
-        const timeout1 = setTimeout(()=>{
-            if (!renderedAt.has(startc)) {
-                drawPart(startc, 2500);
-                renderedAt.add(startc);
-            }
-            runningTimeouts = runningTimeouts.filter((v)=>v !== timeout1
-            );
-        }, 0);
-        runningTimeouts.push(timeout1);
-        start26 += amount;
-    }
-};
-const drawPart = (start27, amount)=>{
     const stems = searches.map((d)=>d.value
     ).map(normalizeWord);
-    for(let wordI = start27; wordI < start27 + amount && wordI < words.length; wordI++){
-        const w = words[wordI];
-        const [x, y] = wordLocation.forward(wordI, size);
-        for(let s = 0; s < stems.length; s += 1){
-            if (w.word === wordMap[stems[s]]) {
-                let color1 = color(searchColors[s].value);
-                color1.opacity = wordOpacity;
-                ctx.fillStyle = color1.toString();
-                ctx.beginPath();
-                ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
-                ctx.fill();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (runningTimeout !== undefined) {
+        clearTimeout(runningTimeout);
+    }
+    runningTimeout = undefined;
+    let start26 = 0;
+    const amount = 2000;
+    let stemI = 0;
+    const run = ()=>{
+        const beginingStart = start26;
+        while(start26 - beginingStart < 2000){
+            const stem = stems[stemI];
+            if (stem === undefined) {
+                console.log(stems, stemI);
+                throw new Error("stem is undefined");
+            }
+            const word = wordMap[stem];
+            if (word === undefined) {
+                stemI += 1;
+                if (stemI >= stems.length) {
+                    return;
+                }
+                continue;
+            }
+            const wordIndices = wordToIndices[word];
+            const color1 = color(searchColors[stemI].value);
+            start26 = drawAmount(color1, wordIndices, start26, amount);
+            if (start26 === wordIndices.length) {
+                start26 = 0;
+                stemI += 1;
+            }
+            if (stemI >= stems.length) {
+                return;
             }
         }
+        runningTimeout = setTimeout(run, 0);
+    };
+    run();
+};
+const drawAmount = (color3, wordIndices, startInd, amount)=>{
+    let i = startInd;
+    for(i = startInd; i < wordIndices.length && i - startInd < amount; i++){
+        const wordI = wordIndices[i];
+        const [x, y] = wordLocation.forward(wordI, size);
+        color3.opacity = wordOpacity;
+        ctx.fillStyle = color3.toString();
+        ctx.beginPath();
+        ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
+    return i;
 };
 const drawHover = ()=>{
     hoverContext.clearRect(0, 0, canvas.width, canvas.height);
@@ -7765,8 +7786,8 @@ const drawHover = ()=>{
     if (hoverIndex < words.length / 2) {
         xShift = canvas.clientWidth - 2 * padding - hoverSize.x * sectionWidth;
     }
-    const start28 = words[startIndex];
-    const ref = `${bookMapInv[start28.book]} ${start28.chapter}:${start28.verse}`;
+    const start27 = words[startIndex];
+    const ref = `${bookMapInv[start27.book]} ${start27.chapter}:${start27.verse}`;
     hoverContext.fillText(ref, padding + xShift, padding - 3);
     words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i)=>{
         let [x, y] = wordLocation.forward(startIndex + i, size);
@@ -7782,9 +7803,9 @@ const drawHover = ()=>{
         ];
         for(let s = 0; s < stems.length; s += 1){
             if (w.word === wordMap[stems[s]]) {
-                let color5 = color(searchColors[s].value);
-                color5.opacity = hoverOpacity;
-                backgroundColor = color5.toString();
+                let color4 = color(searchColors[s].value);
+                color4.opacity = hoverOpacity;
+                backgroundColor = color4.toString();
                 textColor = [
                     255,
                     255,
