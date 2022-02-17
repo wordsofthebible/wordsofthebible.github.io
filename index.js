@@ -7614,8 +7614,6 @@ let hoverSize = {
     x: 50,
     y: 25
 };
-let minSize = 0.5;
-let wordOpacity = 1;
 let hoverOpacity = 0.8;
 let size = 1;
 let columns = 1;
@@ -7765,10 +7763,10 @@ const drawAmount = (color3, wordIndices, startInd, amount)=>{
     for(i = startInd; i < wordIndices.length && i - startInd < amount; i++){
         const wordI = wordIndices[i];
         const [x, y] = wordLocation.forward(wordI, size);
-        color3.opacity = wordOpacity;
+        color3.opacity = +fadeInput.value;
         ctx.fillStyle = color3.toString();
         ctx.beginPath();
-        ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + size / 2, y + size / 2, size + +sizeInput.value, size + +sizeInput.value, 0, 0, Math.PI * 2);
         ctx.fill();
     }
     return i;
@@ -7841,12 +7839,10 @@ const info = document.getElementById("info");
 fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
         words = versesToWords(d);
         sizeInput.addEventListener("input", ()=>{
-            minSize = +sizeInput.value;
             draw();
             drawHover();
         });
         fadeInput.addEventListener("input", ()=>{
-            wordOpacity = +fadeInput.value;
             draw();
             drawHover();
         });
@@ -7858,8 +7854,8 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
             searchColors.forEach((c, i)=>{
                 params += `&color${i}=` + encodeURIComponent(c.value);
             });
-            params += `&size=${minSize}`;
-            params += `&fade=${wordOpacity}`;
+            params += `&size=${sizeInput.value}`;
+            params += `&fade=${fadeInput.value}`;
             copyLink.value = window.location.origin + params;
         });
         copyLinkButton.addEventListener("click", ()=>{
@@ -7925,11 +7921,9 @@ searchColors.forEach((c, i)=>{
 });
 let sizeVal = getQueryVariable("size");
 if (sizeVal !== undefined) {
-    minSize = +sizeVal;
     sizeInput.value = sizeVal;
 }
 let fadeVal = getQueryVariable("fade");
 if (fadeVal !== undefined) {
-    wordOpacity = +fadeVal;
     fadeInput.value = fadeVal;
 }

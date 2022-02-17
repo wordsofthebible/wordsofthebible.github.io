@@ -62,8 +62,6 @@ const hoverContext = hoverCanvas.getContext("2d") as CanvasRenderingContext2D;
 let padding = 50;
 let sectionWidth = 10;
 let hoverSize = {x: 50, y: 25};
-let minSize = 0.5;
-let wordOpacity = 1.0;
 let hoverOpacity = 0.8;
 
 let size = 1;
@@ -226,10 +224,10 @@ const drawAmount = (color: d3.RGBColor, wordIndices: number[], startInd: number,
   for (i = startInd; i < wordIndices.length && i - startInd < amount; i++) {
     const wordI = wordIndices[i];
     const [x, y] = wordLocation.forward(wordI, size);
-    color.opacity = wordOpacity;
+    color.opacity = +fadeInput.value;
     ctx.fillStyle = color.toString();
     ctx.beginPath();
-    ctx.ellipse(x + size / 2, y + size / 2, size + minSize, size + minSize, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + size / 2, y + size / 2, size + +sizeInput.value, size + +sizeInput.value, 0, 0, Math.PI * 2);
     ctx.fill();
   }
   return i;
@@ -303,13 +301,11 @@ fetch("kjv.json").then(d => d.json().then(d => {
   words = versesToWords(d);
 
   sizeInput.addEventListener("input", () => {
-    minSize = +sizeInput.value;
     draw();
     drawHover();
   });
 
   fadeInput.addEventListener("input", () => {
-    wordOpacity = +fadeInput.value;
     draw();
     drawHover();
   });
@@ -322,8 +318,8 @@ fetch("kjv.json").then(d => d.json().then(d => {
     searchColors.forEach((c, i) => {
       params += `&color${i}=` + encodeURIComponent(c.value);
     });
-    params += `&size=${minSize}`;
-    params += `&fade=${wordOpacity}`;
+    params += `&size=${sizeInput.value}`;
+    params += `&fade=${fadeInput.value}`;
     copyLink.value = window.location.origin + params;
   });
 
@@ -395,13 +391,11 @@ searchColors.forEach((c, i) => {
 
 let sizeVal = getQueryVariable("size");
 if (sizeVal !== undefined) {
-  minSize = +sizeVal;
   sizeInput.value = sizeVal;
 }
 
 let fadeVal = getQueryVariable("fade");
 if (fadeVal !== undefined) {
-  wordOpacity = +fadeVal;
   fadeInput.value = fadeVal;
 }
 
