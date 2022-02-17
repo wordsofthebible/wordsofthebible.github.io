@@ -186,7 +186,7 @@ const draw = () => {
   let stemI = 0;
 
   const run = () => {
-    const beginingStart = start;
+    let beginingStart = start;
     while (start - beginingStart < amount) {
       const stem = stems[stemI];
       if (stem === undefined) {
@@ -204,8 +204,10 @@ const draw = () => {
       const wordIndices = wordToIndices[word];
       const color = d3.color(searchColors[stemI].value) as d3.RGBColor;
       start = drawAmount(color, wordIndices, start, amount);
+      // console.log('start', start);
       if (start === wordIndices.length) {
         start = 0;
+        beginingStart = 0;
         stemI += 1;
       }
       if (stemI >= stems.length) {

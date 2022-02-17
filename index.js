@@ -7729,7 +7729,7 @@ const draw = ()=>{
     const amount = 2000;
     let stemI = 0;
     const run = ()=>{
-        const beginingStart = start26;
+        let beginingStart = start26;
         while(start26 - beginingStart < 2000){
             const stem = stems[stemI];
             if (stem === undefined) {
@@ -7749,6 +7749,7 @@ const draw = ()=>{
             start26 = drawAmount(color1, wordIndices, start26, amount);
             if (start26 === wordIndices.length) {
                 start26 = 0;
+                beginingStart = 0;
                 stemI += 1;
             }
             if (stemI >= stems.length) {
