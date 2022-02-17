@@ -7867,42 +7867,6 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
             copyLink.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(copyLink.value);
         });
-        searchColors.forEach((s, i)=>{
-            s.value = Tableau10[i];
-        });
-        function getQueryVariable(variable) {
-            let query = window.location.search.substring(1);
-            let vars = query.split('&');
-            for(let i = 0; i < vars.length; i++){
-                let pair = vars[i].split('=');
-                if (decodeURIComponent(pair[0]) == variable) {
-                    return decodeURIComponent(pair[1]);
-                }
-            }
-            return undefined;
-        }
-        searches.forEach((s, i)=>{
-            let val = getQueryVariable(`search${i}`);
-            if (val !== undefined) {
-                s.value = val;
-            }
-        });
-        searchColors.forEach((c, i)=>{
-            let val = getQueryVariable(`color${i}`);
-            if (val !== undefined) {
-                c.value = val;
-            }
-        });
-        let sizeVal = getQueryVariable("size");
-        if (sizeVal !== undefined) {
-            minSize = +sizeVal;
-            sizeInput.value = sizeVal;
-        }
-        let fadeVal = getQueryVariable("fade");
-        if (fadeVal !== undefined) {
-            wordOpacity = +fadeVal;
-            fadeInput.value = fadeVal;
-        }
         searches.forEach((s)=>s.addEventListener("input", ()=>{
                 draw();
                 drawHover();
@@ -7933,3 +7897,39 @@ fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
         initializeView();
     })
 );
+searchColors.forEach((s, i)=>{
+    s.value = Tableau10[i];
+});
+function getQueryVariable(variable) {
+    let query = window.location.search.substring(1);
+    let vars = query.split('&');
+    for(let i = 0; i < vars.length; i++){
+        let pair = vars[i].split('=');
+        if (decodeURIComponent(pair[0]) == variable) {
+            return decodeURIComponent(pair[1]);
+        }
+    }
+    return undefined;
+}
+searches.forEach((s, i)=>{
+    let val = getQueryVariable(`search${i}`);
+    if (val !== undefined) {
+        s.value = val;
+    }
+});
+searchColors.forEach((c, i)=>{
+    let val = getQueryVariable(`color${i}`);
+    if (val !== undefined) {
+        c.value = val;
+    }
+});
+let sizeVal = getQueryVariable("size");
+if (sizeVal !== undefined) {
+    minSize = +sizeVal;
+    sizeInput.value = sizeVal;
+}
+let fadeVal = getQueryVariable("fade");
+if (fadeVal !== undefined) {
+    wordOpacity = +fadeVal;
+    fadeInput.value = fadeVal;
+}
