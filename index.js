@@ -1,7 +1,3 @@
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
-// This code was bundled using `deno bundle` and it's not recommended to edit it manually
-
 function ascending(a, b) {
     return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -7791,6 +7787,9 @@ const drawHover = ()=>{
     const stems = searches.map((d)=>d.value
     ).map(normalizeWord);
     const startIndex = Math.max(0, hoverSection * (sectionWidth * height) + hoverRow * sectionWidth);
+    if (startIndex >= cwords.length) {
+        return;
+    }
     let xShift = 0;
     if (hoverIndex < cwords.length / 2) {
         xShift = canvas.clientWidth - 2 * padding - hoverSize.x * sectionWidth;
@@ -7895,7 +7894,7 @@ loadVersion(versionInput.value.toLowerCase()).then(()=>{
             await loadVersion(versionInput.value);
         }
         ({ words: cwords , wordMap: cwordMap , wordToIndices: cwordToIndices , bookMap: cbookMap , bookMapInv: cbookMapInv  } = versionToWords[versionInput.value.toLowerCase()]);
-        draw();
+        initializeView();
         drawHover();
     });
     function brush(event2) {
@@ -7955,3 +7954,4 @@ let version = getQueryVariable("version");
 if (version !== undefined) {
     versionInput.value = version.toLowerCase();
 }
+
