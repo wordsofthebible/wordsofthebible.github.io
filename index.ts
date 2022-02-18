@@ -18,38 +18,49 @@ type Word = {
 const normalizeWord = (d: string) => d.toLowerCase();
 
 
-let wordMap: { [word: string]: number } = {}
-let wordToIndices: { [word: number]: number[] } = {}
-let bookMap: { [book: string]: number } = {}
-let bookMapInv: { [book: number]: string } = {}
-let words = [] as Word[];
+let cwordMap: { [word: string]: number } = {}
+let cwordToIndices: { [word: number]: number[] } = {}
+let cbookMap: { [book: string]: number } = {}
+let cbookMapInv: { [book: number]: string } = {}
+let cwords = [] as Word[];
 
 const versesToWords = (verses: Verse[]) => {
+  const wordMap: { [word: string]: number } = {}
+  const wordToIndices: { [word: number]: number[] } = {}
+  const bookMap: { [book: string]: number } = {}
+  const bookMapInv: { [book: number]: string } = {}
+
   let wordIndex = 0;
   let bookIndex = 0;
   let arrayIndex = 0;
-  return verses.flatMap(v => {
-    const [book, chapter, verse] = v.ref.split(".");
-    return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
-      const stem = normalizeWord(word);
-      if (wordMap[stem] === undefined) {
-        wordMap[stem] = wordIndex;
-        wordIndex += 1;
-      }
-      if (bookMap[book] === undefined) {
-        bookMap[book] = bookIndex;
-        bookMapInv[bookIndex] = book;
-        bookIndex += 1;
-      }
-      if (wordToIndices[wordMap[stem]] === undefined) {
-        wordToIndices[wordMap[stem]] = []
-      }
-      wordToIndices[wordMap[stem]].push(arrayIndex);
+  return {
+    wordMap,
+    wordToIndices,
+    bookMap,
+    bookMapInv,
+    words: verses.flatMap(v => {
+      const [book, chapter, verse] = v.ref.split(".");
+      return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word) : Word => {
+        const stem = normalizeWord(word);
+        if (wordMap[stem] === undefined) {
+          wordMap[stem] = wordIndex;
+          wordIndex += 1;
+        }
+        if (bookMap[book] === undefined) {
+          bookMap[book] = bookIndex;
+          bookMapInv[bookIndex] = book;
+          bookIndex += 1;
+        }
+        if (wordToIndices[wordMap[stem]] === undefined) {
+          wordToIndices[wordMap[stem]] = []
+        }
+        wordToIndices[wordMap[stem]].push(arrayIndex);
 
-      arrayIndex += 1;
-      return {book: bookMap[book] as number, chapter: +chapter, verse: +verse, word: wordMap[stem] as number, text: word};
-    });
-  });
+        arrayIndex += 1;
+        return {book: bookMap[book] as number, chapter: +chapter, verse: +verse, word: wordMap[stem] as number, text: word};
+      });
+    })
+  }
 };
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -88,9 +99,9 @@ const initializeView = () => {
 
   // To fit entire Bible on screen, we need this to hold:
   // canvas.width * canvas.height = size^2 * words.length
-  size = Math.sqrt((canvas.clientWidth - 2 * padding) * (canvas.clientHeight - 2 * padding) / words.length);
+  size = Math.sqrt((canvas.clientWidth - 2 * padding) * (canvas.clientHeight - 2 * padding) / cwords.length);
   columns = Math.floor((canvas.clientWidth - 2 * padding) / size);
-  height = Math.ceil(words.length / columns);
+  height = Math.ceil(cwords.length / columns);
   hoverRows = Math.ceil((canvas.clientHeight - 2 * padding) / hoverSize.y);
 
   drawBackground();
@@ -139,14 +150,14 @@ const drawBackground = () => {
   let curBook = -1;
   const lineColor = "rgb(220,220,220)";
   backContext.fillStyle = lineColor;
-  const [lastX, lastY] = wordLocation.forward(words.length - (words.length % sectionWidth), size);
+  const [lastX, lastY] = wordLocation.forward(cwords.length - (cwords.length % sectionWidth), size);
   backContext.fillRect(padding, padding, lastX + size * sectionWidth - padding, 1);
   backContext.fillRect(padding, size * height + padding, lastX - padding, 1);
   backContext.fillRect(padding, padding, 1, size * height);
   backContext.fillRect(lastX + size * sectionWidth, padding, 1, lastY - padding);
   backContext.fillRect(lastX, lastY, size * sectionWidth, 1);
   backContext.fillRect(lastX, lastY, 1, size * height - (lastY - padding));
-  words.forEach((w, i) => {
+  cwords.forEach((w, i) => {
     if (w.book !== curBook) {
       const [x, y] = wordLocation.forward(i - (i % sectionWidth), size);
       backContext.fillRect(x, y, size * sectionWidth, 1);
@@ -158,10 +169,10 @@ const drawBackground = () => {
 
   curBook = -1;
   backContext.fillStyle = "rgb(50,50,50)";
-  words.forEach((w, i) => {
+  cwords.forEach((w, i) => {
     if (w.book !== curBook) {
       const [x, y] = wordLocation.forward(i - (i % sectionWidth), size);
-      backContext.fillText(bookMapInv[w.book] || "", x + 2, y + 10);
+      backContext.fillText(cbookMapInv[w.book] || "", x + 2, y + 10);
       curBook = w.book;
     }
   });
@@ -191,7 +202,7 @@ const draw = () => {
         console.log(stems, stemI);
         throw new Error("stem is undefined");
       }
-      const word = wordMap[stem];
+      const word = cwordMap[stem];
       if (word === undefined) {
         stemI += 1;
         if (stemI >= stems.length) {
@@ -199,7 +210,7 @@ const draw = () => {
         }
         continue;
       }
-      const wordIndices = wordToIndices[word];
+      const wordIndices = cwordToIndices[word];
       const color = d3.color(searchColors[stemI].value) as d3.RGBColor;
       start = drawAmount(color, wordIndices, start, amount);
       // console.log('start', start);
@@ -244,15 +255,15 @@ const drawHover = () => {
   const startIndex = Math.max(0, hoverSection * (sectionWidth * height) + hoverRow * sectionWidth);
 
   let xShift = 0;
-  if (hoverIndex < words.length / 2) {
+  if (hoverIndex < cwords.length / 2) {
     xShift = (canvas.clientWidth - 2 * padding) - (hoverSize.x * sectionWidth);
   }
 
-  const start = words[startIndex];
-  const ref = `${bookMapInv[start.book]} ${start.chapter}:${start.verse}`;
+  const start = cwords[startIndex];
+  const ref = `${cbookMapInv[start.book]} ${start.chapter}:${start.verse}`;
   hoverContext.fillText(ref, padding + xShift, padding - 3);
 
-  words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i) => {
+  cwords.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i) => {
     let [x, y] = wordLocation.forward(startIndex + i, size);
     hoverContext.fillStyle = "rgb(150,150,150)";
     hoverContext.fillRect(x, y, size, size);
@@ -263,7 +274,7 @@ const drawHover = () => {
     let backgroundColor = `rgba(255,255,255,${hoverOpacity})`;
     let textColor = [0, 0, 0];
     for (let s = 0; s < stems.length; s += 1) {
-      if (w.word === wordMap[stems[s]]) {
+      if (w.word === cwordMap[stems[s]]) {
         let color = d3.color(searchColors[s].value) as d3.RGBColor;
         color.opacity = hoverOpacity;
         backgroundColor = color.toString();
@@ -296,9 +307,26 @@ const copyLink = document.getElementById("copy-link") as HTMLInputElement;
 const copyLinkButton = document.getElementById("copy-link-button") as HTMLButtonElement;
 const shareButton = document.getElementById("share-button") as HTMLButtonElement;
 const info = document.getElementById("info") as HTMLDivElement;
+const versionInput = document.getElementById('version') as HTMLSelectElement;
 
-fetch("kjv.json").then(d => d.json().then(d => {
-  words = versesToWords(d);
+const versionToWords: {
+  [v: string]: {
+    wordMap: { [word: string]: number },
+    wordToIndices: { [word: number]: number[] },
+    bookMap: { [book: string]: number },
+    bookMapInv: { [book: number]: string },
+    words: Word[],
+  }
+} = {};
+
+const loadVersion = async (v: string) => {
+  const res = await fetch(`versions/${v}.json`);
+  const json = await res.json();
+  versionToWords[v] = versesToWords(json);
+}
+
+loadVersion(versionInput.value.toLowerCase()).then(() => {
+  ({ words: cwords, wordMap: cwordMap, wordToIndices: cwordToIndices, bookMap: cbookMap, bookMapInv: cbookMapInv } = versionToWords[versionInput.value.toLowerCase()]);
 
   sizeInput.addEventListener("input", () => {
     draw();
@@ -329,8 +357,6 @@ fetch("kjv.json").then(d => d.json().then(d => {
     navigator.clipboard.writeText(copyLink.value);
   });
 
-  
-
   searches.forEach(s => s.addEventListener("input", () => {
     draw();
     drawHover();
@@ -340,6 +366,15 @@ fetch("kjv.json").then(d => d.json().then(d => {
     draw();
     drawHover();
   }));
+
+  versionInput.addEventListener('change', async () => {
+    if (!versionToWords[versionInput.value]) {
+      await loadVersion(versionInput.value)
+    }
+    ({ words: cwords, wordMap: cwordMap, wordToIndices: cwordToIndices, bookMap: cbookMap, bookMapInv: cbookMapInv } = versionToWords[versionInput.value.toLowerCase()]);
+    draw();
+    drawHover();
+  })
 
   function brush(event: MouseEvent) {
     const {section, row, col} = wordLocation.backwardCoords([event.offsetX, event.offsetY], size);
@@ -355,7 +390,7 @@ fetch("kjv.json").then(d => d.json().then(d => {
 
   window.addEventListener("resize", initializeView);
   initializeView();
-}));
+});
 
 searchColors.forEach((s, i) => {
   s.value = d3.schemeTableau10[i];
@@ -398,4 +433,10 @@ let fadeVal = getQueryVariable("fade");
 if (fadeVal !== undefined) {
   fadeInput.value = fadeVal;
 }
+
+let version = getQueryVariable("version");
+if (version !== undefined) {
+  versionInput.value = version.toLowerCase();
+}
+
 

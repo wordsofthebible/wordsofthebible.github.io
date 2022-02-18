@@ -7565,42 +7565,52 @@ function transform(node) {
 }
 const normalizeWord = (d)=>d.toLowerCase()
 ;
-let wordMap = {};
-let wordToIndices = {};
-let bookMap = {};
-let bookMapInv = {};
-let words = [];
+let cwordMap = {};
+let cwordToIndices = {};
+let cbookMap = {};
+let cbookMapInv = {};
+let cwords = [];
 const versesToWords = (verses)=>{
+    const wordMap = {};
+    const wordToIndices = {};
+    const bookMap = {};
+    const bookMapInv = {};
     let wordIndex = 0;
     let bookIndex = 0;
     let arrayIndex = 0;
-    return verses.flatMap((v)=>{
-        const [book, chapter, verse] = v.ref.split(".");
-        return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word)=>{
-            const stem = normalizeWord(word);
-            if (wordMap[stem] === undefined) {
-                wordMap[stem] = wordIndex;
-                wordIndex += 1;
-            }
-            if (bookMap[book] === undefined) {
-                bookMap[book] = bookIndex;
-                bookMapInv[bookIndex] = book;
-                bookIndex += 1;
-            }
-            if (wordToIndices[wordMap[stem]] === undefined) {
-                wordToIndices[wordMap[stem]] = [];
-            }
-            wordToIndices[wordMap[stem]].push(arrayIndex);
-            arrayIndex += 1;
-            return {
-                book: bookMap[book],
-                chapter: +chapter,
-                verse: +verse,
-                word: wordMap[stem],
-                text: word
-            };
-        });
-    });
+    return {
+        wordMap,
+        wordToIndices,
+        bookMap,
+        bookMapInv,
+        words: verses.flatMap((v)=>{
+            const [book, chapter, verse] = v.ref.split(".");
+            return (v.text.match(/\w+(?:\u2019\w+)*/g) || []).map((word)=>{
+                const stem = normalizeWord(word);
+                if (wordMap[stem] === undefined) {
+                    wordMap[stem] = wordIndex;
+                    wordIndex += 1;
+                }
+                if (bookMap[book] === undefined) {
+                    bookMap[book] = bookIndex;
+                    bookMapInv[bookIndex] = book;
+                    bookIndex += 1;
+                }
+                if (wordToIndices[wordMap[stem]] === undefined) {
+                    wordToIndices[wordMap[stem]] = [];
+                }
+                wordToIndices[wordMap[stem]].push(arrayIndex);
+                arrayIndex += 1;
+                return {
+                    book: bookMap[book],
+                    chapter: +chapter,
+                    verse: +verse,
+                    word: wordMap[stem],
+                    text: word
+                };
+            });
+        })
+    };
 };
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -7633,9 +7643,9 @@ const initializeView = ()=>{
     ctx.scale(scale, scale);
     backContext.scale(scale, scale);
     hoverContext.scale(scale, scale);
-    size = Math.sqrt((canvas.clientWidth - 2 * padding) * (canvas.clientHeight - 2 * padding) / words.length);
+    size = Math.sqrt((canvas.clientWidth - 2 * padding) * (canvas.clientHeight - 2 * padding) / cwords.length);
     columns = Math.floor((canvas.clientWidth - 2 * padding) / size);
-    height = Math.ceil(words.length / columns);
+    height = Math.ceil(cwords.length / columns);
     hoverRows = Math.ceil((canvas.clientHeight - 2 * padding) / hoverSize.y);
     drawBackground();
     draw();
@@ -7688,14 +7698,14 @@ const drawBackground = ()=>{
     let curBook = -1;
     const lineColor = "rgb(220,220,220)";
     backContext.fillStyle = lineColor;
-    const [lastX, lastY] = wordLocation.forward(words.length - words.length % sectionWidth, size);
+    const [lastX, lastY] = wordLocation.forward(cwords.length - cwords.length % sectionWidth, size);
     backContext.fillRect(padding, padding, lastX + size * sectionWidth - padding, 1);
     backContext.fillRect(padding, size * height + padding, lastX - padding, 1);
     backContext.fillRect(padding, padding, 1, size * height);
     backContext.fillRect(lastX + size * sectionWidth, padding, 1, lastY - padding);
     backContext.fillRect(lastX, lastY, size * sectionWidth, 1);
     backContext.fillRect(lastX, lastY, 1, size * height - (lastY - padding));
-    words.forEach((w, i)=>{
+    cwords.forEach((w, i)=>{
         if (w.book !== curBook) {
             const [x, y] = wordLocation.forward(i - i % sectionWidth, size);
             backContext.fillRect(x, y, size * sectionWidth, 1);
@@ -7706,10 +7716,10 @@ const drawBackground = ()=>{
     });
     curBook = -1;
     backContext.fillStyle = "rgb(50,50,50)";
-    words.forEach((w, i)=>{
+    cwords.forEach((w, i)=>{
         if (w.book !== curBook) {
             const [x, y] = wordLocation.forward(i - i % sectionWidth, size);
-            backContext.fillText(bookMapInv[w.book] || "", x + 2, y + 10);
+            backContext.fillText(cbookMapInv[w.book] || "", x + 2, y + 10);
             curBook = w.book;
         }
     });
@@ -7734,7 +7744,7 @@ const draw = ()=>{
                 console.log(stems, stemI);
                 throw new Error("stem is undefined");
             }
-            const word = wordMap[stem];
+            const word = cwordMap[stem];
             if (word === undefined) {
                 stemI += 1;
                 if (stemI >= stems.length) {
@@ -7742,7 +7752,7 @@ const draw = ()=>{
                 }
                 continue;
             }
-            const wordIndices = wordToIndices[word];
+            const wordIndices = cwordToIndices[word];
             const color1 = color(searchColors[stemI].value);
             start26 = drawAmount(color1, wordIndices, start26, amount);
             if (start26 === wordIndices.length) {
@@ -7782,13 +7792,13 @@ const drawHover = ()=>{
     ).map(normalizeWord);
     const startIndex = Math.max(0, hoverSection * (sectionWidth * height) + hoverRow * sectionWidth);
     let xShift = 0;
-    if (hoverIndex < words.length / 2) {
+    if (hoverIndex < cwords.length / 2) {
         xShift = canvas.clientWidth - 2 * padding - hoverSize.x * sectionWidth;
     }
-    const start27 = words[startIndex];
-    const ref = `${bookMapInv[start27.book]} ${start27.chapter}:${start27.verse}`;
+    const start27 = cwords[startIndex];
+    const ref = `${cbookMapInv[start27.book]} ${start27.chapter}:${start27.verse}`;
     hoverContext.fillText(ref, padding + xShift, padding - 3);
-    words.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i)=>{
+    cwords.slice(startIndex, startIndex + hoverRows * sectionWidth).forEach((w, i)=>{
         let [x, y] = wordLocation.forward(startIndex + i, size);
         hoverContext.fillStyle = "rgb(150,150,150)";
         hoverContext.fillRect(x, y, size, size);
@@ -7801,7 +7811,7 @@ const drawHover = ()=>{
             0
         ];
         for(let s = 0; s < stems.length; s += 1){
-            if (w.word === wordMap[stems[s]]) {
+            if (w.word === cwordMap[stems[s]]) {
                 let color4 = color(searchColors[s].value);
                 color4.opacity = hoverOpacity;
                 backgroundColor = color4.toString();
@@ -7836,63 +7846,77 @@ const copyLink = document.getElementById("copy-link");
 const copyLinkButton = document.getElementById("copy-link-button");
 const shareButton = document.getElementById("share-button");
 const info = document.getElementById("info");
-fetch("kjv.json").then((d1)=>d1.json().then((d)=>{
-        words = versesToWords(d);
-        sizeInput.addEventListener("input", ()=>{
+const versionInput = document.getElementById('version');
+const versionToWords = {};
+const loadVersion = async (v)=>{
+    const res = await fetch(`versions/${v}.json`);
+    const json = await res.json();
+    versionToWords[v] = versesToWords(json);
+};
+loadVersion(versionInput.value.toLowerCase()).then(()=>{
+    ({ words: cwords , wordMap: cwordMap , wordToIndices: cwordToIndices , bookMap: cbookMap , bookMapInv: cbookMapInv  } = versionToWords[versionInput.value.toLowerCase()]);
+    sizeInput.addEventListener("input", ()=>{
+        draw();
+        drawHover();
+    });
+    fadeInput.addEventListener("input", ()=>{
+        draw();
+        drawHover();
+    });
+    shareButton.addEventListener("click", ()=>{
+        let params = "?";
+        searches.forEach((s, i)=>{
+            params += `&search${i}=` + encodeURIComponent(s.value);
+        });
+        searchColors.forEach((c, i)=>{
+            params += `&color${i}=` + encodeURIComponent(c.value);
+        });
+        params += `&size=${sizeInput.value}`;
+        params += `&fade=${fadeInput.value}`;
+        copyLink.value = window.location.origin + params;
+    });
+    copyLinkButton.addEventListener("click", ()=>{
+        copyLink.select();
+        copyLink.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyLink.value);
+    });
+    searches.forEach((s)=>s.addEventListener("input", ()=>{
             draw();
             drawHover();
-        });
-        fadeInput.addEventListener("input", ()=>{
+        })
+    );
+    searchColors.forEach((s)=>s.addEventListener("input", ()=>{
             draw();
             drawHover();
-        });
-        shareButton.addEventListener("click", ()=>{
-            let params = "?";
-            searches.forEach((s, i)=>{
-                params += `&search${i}=` + encodeURIComponent(s.value);
-            });
-            searchColors.forEach((c, i)=>{
-                params += `&color${i}=` + encodeURIComponent(c.value);
-            });
-            params += `&size=${sizeInput.value}`;
-            params += `&fade=${fadeInput.value}`;
-            copyLink.value = window.location.origin + params;
-        });
-        copyLinkButton.addEventListener("click", ()=>{
-            copyLink.select();
-            copyLink.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyLink.value);
-        });
-        searches.forEach((s)=>s.addEventListener("input", ()=>{
-                draw();
-                drawHover();
-            })
-        );
-        searchColors.forEach((s)=>s.addEventListener("input", ()=>{
-                draw();
-                drawHover();
-            })
-        );
-        function brush(event2) {
-            const { section , row , col  } = wordLocation.backwardCoords([
-                event2.offsetX,
-                event2.offsetY
-            ], size);
-            hoverIndex = wordLocation.backward([
-                event2.offsetX,
-                event2.offsetY
-            ], size);
-            hoverSection = section;
-            hoverRow = Math.floor(row - Math.min(hoverRows / 2));
-            drawHover();
+        })
+    );
+    versionInput.addEventListener('change', async ()=>{
+        if (!versionToWords[versionInput.value]) {
+            await loadVersion(versionInput.value);
         }
-        hoverCanvas.addEventListener("mousemove", (event3)=>{
-            brush(event3);
-        });
-        window.addEventListener("resize", initializeView);
-        initializeView();
-    })
-);
+        ({ words: cwords , wordMap: cwordMap , wordToIndices: cwordToIndices , bookMap: cbookMap , bookMapInv: cbookMapInv  } = versionToWords[versionInput.value.toLowerCase()]);
+        draw();
+        drawHover();
+    });
+    function brush(event2) {
+        const { section , row , col  } = wordLocation.backwardCoords([
+            event2.offsetX,
+            event2.offsetY
+        ], size);
+        hoverIndex = wordLocation.backward([
+            event2.offsetX,
+            event2.offsetY
+        ], size);
+        hoverSection = section;
+        hoverRow = Math.floor(row - Math.min(hoverRows / 2));
+        drawHover();
+    }
+    hoverCanvas.addEventListener("mousemove", (event3)=>{
+        brush(event3);
+    });
+    window.addEventListener("resize", initializeView);
+    initializeView();
+});
 searchColors.forEach((s, i)=>{
     s.value = Tableau10[i];
 });
@@ -7926,4 +7950,8 @@ if (sizeVal !== undefined) {
 let fadeVal = getQueryVariable("fade");
 if (fadeVal !== undefined) {
     fadeInput.value = fadeVal;
+}
+let version = getQueryVariable("version");
+if (version !== undefined) {
+    versionInput.value = version.toLowerCase();
 }

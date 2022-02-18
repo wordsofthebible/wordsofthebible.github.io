@@ -12,7 +12,7 @@ for file in ./modules/*; do
 
     if [ ! -f "./json/$n.json" ]; then
 
-        python3 convertSwordToJson.py --source_file="$file" --bible_version="$n" --output_file="./json/$n.json"
+        python3 convertSwordToJson.py --source_file="$file" --bible_version="$n" --output_file="./json/$n.json" || echo "Failed to convert $file"
 
     fi
 
